@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Trade Validation Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #c8a96e;
+  --gold2: #e8c87e;
+  --green: #2ecc71;
+  --red: #e74c3c;
+  --amber: #f39c12;
+  --blue: #3498db;
+  --bg: #09090f;
+  --bg2: #0f0f1a;
+  --bg3: #15151f;
+  --border: #1e1e2e;
+  --text: #d4d8e8;
+  --muted: #666880;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --display: 'Bebas Neue', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Scanline texture ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Header ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(9,9,15,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 54px;
+}
+.logo {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+.logo span { color: var(--muted); }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--green);
+  background: rgba(46,204,113,0.08);
+  border: 1px solid rgba(46,204,113,0.2);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.clock {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── Tab nav ── */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ── Content ── */
+.content { padding: 16px; max-width: 640px; margin: 0 auto; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Section ── */
+.sec { margin-bottom: 20px; }
+.sec-hdr {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-hdr::before {
+  content: '';
+  width: 3px; height: 12px;
+  background: var(--gold);
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.card.pass { border-color: rgba(46,204,113,0.4); }
+.card.warn { border-color: rgba(243,156,18,0.4); }
+.card.fail { border-color: rgba(231,76,60,0.3); }
+
+/* ── Badges ── */
+.badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.badge.g { background: rgba(46,204,113,0.1); color: var(--green); border: 1px solid rgba(46,204,113,0.2); }
+.badge.a { background: rgba(243,156,18,0.1); color: var(--amber); border: 1px solid rgba(243,156,18,0.2); }
+.badge.r { background: rgba(231,76,60,0.1); color: var(--red); border: 1px solid rgba(231,76,60,0.2); }
+.badge.n { background: rgba(102,104,128,0.15); color: var(--muted); border: 1px solid rgba(102,104,128,0.2); }
+
+/* ── Rows ── */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lbl { font-size: 13px; color: var(--muted); }
+.val { font-size: 13px; font-weight: 500; color: var(--text); }
+
+/* ── Checkboxes ── */
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.check-row:last-child { border-bottom: none; }
+.check-row input[type=checkbox] {
+  width: 16px; height: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+.check-lbl { font-size: 13px; color: var(--text); line-height: 1.4; }
+.check-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Score bar ── */
+.sbar-wrap {
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.sbar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease, background 0.5s;
+}
+
+/* ── Verdict ── */
+.verdict {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 10px;
+  letter-spacing: 0.02em;
+}
+.verdict.pass { background: rgba(46,204,113,0.1); color: var(--green); border: 1px solid rgba(46,204,113,0.2); }
+.verdict.partial { background: rgba(243,156,18,0.1); color: var(--amber); border: 1px solid rgba(243,156,18,0.2); }
+.verdict.fail { background: rgba(231,76,60,0.08); color: var(--red); border: 1px solid rgba(231,76,60,0.15); }
+
+/* ── Regime grid ── */
+.regime-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.regime-opt {
+  padding: 12px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: center;
+  transition: all 0.15s;
+  background: var(--bg3);
+  line-height: 1.3;
+}
+.regime-opt:hover { border-color: var(--gold); color: var(--text); }
+.regime-opt .ricon { font-size: 18px; display: block; margin-bottom: 5px; }
+.regime-opt.sel-up    { background: rgba(46,204,113,0.1);  color: var(--green); border-color: rgba(46,204,113,0.4); }
+.regime-opt.sel-down  { background: rgba(231,76,60,0.1);   color: var(--red);   border-color: rgba(231,76,60,0.4); }
+.regime-opt.sel-chop  { background: rgba(243,156,18,0.1);  color: var(--amber); border-color: rgba(243,156,18,0.4); }
+.regime-opt.sel-hvol  { background: rgba(231,76,60,0.1);   color: var(--red);   border-color: rgba(231,76,60,0.4); }
+
+/* ── Playbook box ── */
+.playbook {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  padding: 9px 12px;
+  background: var(--bg3);
+  border-radius: 6px;
+  margin-top: 10px;
+  border-left: 2px solid var(--gold);
+}
+.playbook strong { color: var(--gold); font-weight: 500; }
+
+/* ── Select / Input ── */
+select, input[type=number] {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  margin-top: 5px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+select:focus, input[type=number]:focus { border-color: var(--gold); }
+
+/* ── Metric grid ── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.metric {
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+.metric-lbl { font-size: 10px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.metric-val { font-size: 18px; font-weight: 500; color: var(--text); font-family: var(--mono); }
+.metric-val.g { color: var(--green); }
+.metric-val.r { color: var(--red); }
+.metric-val.a { color: var(--amber); }
+.metric-val.gold { color: var(--gold); }
+
+/* ── Step rows (5-step) ── */
+.step-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.step-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.step-body { padding: 0 16px; }
+
+/* ── Strategy rec ── */
+.strat-rec {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 10px 12px;
+  background: var(--bg3);
+  border-radius: 6px;
+  border-left: 2px solid var(--gold);
+  margin-top: 6px;
+}
+
+/* ── Score display ── */
+.score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+.score-big { font-family: var(--display); font-size: 32px; color: var(--gold); line-height: 1; }
+.score-max { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+/* ── Divider ── */
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* ── Footer note ── */
+.footnote {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px 16px;
+  border-top: 1px solid var(--border);
+  line-height: 1.6;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.tab-panel.active { animation: fadeIn 0.25s ease; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="logo">Trade <span>/</span> Validator</div>
+  <div class="header-right">
+    <div class="clock" id="clk">--:-- --</div>
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+  </div>
+</header>
+
+<!-- Tab nav -->
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('workflow',this)">Daily Workflow</button>
+  <button class="tab-btn" onclick="showTab('validate',this)">Validate Trade</button>
+  <button class="tab-btn" onclick="showTab('risk',this)">Risk Check</button>
+  <button class="tab-btn" onclick="showTab('cheatsheet',this)">Cheat Sheet</button>
+</nav>
+
+<div class="content">
+
+<!-- ═══ TAB 1: DAILY WORKFLOW ═══ -->
+<div class="tab-panel active" id="tab-workflow">
+
+  <!-- Regime -->
+  <div class="sec">
+    <div class="sec-hdr">Step 1 — Market regime</div>
+    <div class="card" id="regime-card">
+      <div class="row"><span class="lbl">What regime are we in today?</span><span class="badge n" id="regime-badge">Not set</span></div>
+      <div class="regime-grid">
+        <div class="regime-opt" id="ro-up" onclick="setRegime('up')">
+          <span class="ricon">📈</span>Trending up
+        </div>
+        <div class="regime-opt" id="ro-down" onclick="setRegime('down')">
+          <span class="ricon">📉</span>Trending down
+        </div>
+        <div class="regime-opt" id="ro-chop" onclick="setRegime('chop')">
+          <span class="ricon">↔</span>Choppy / range
+        </div>
+        <div class="regime-opt" id="ro-hvol" onclick="setRegime('hvol')">
+          <span class="ricon">⚡</span>High vol (VIX 25+)
+        </div>
+      </div>
+      <div class="playbook" id="playbook" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- MA Stack -->
+  <div class="sec">
+    <div class="sec-hdr">Step 2 — MA stack check</div>
+    <div class="card">
+      <div class="check-row">
+        <input type="checkbox" id="ma1" onchange="updateWF()">
+        <div><div class="check-lbl">SPY MAs stacked bullish (9 EMA > 20 SMA > 50 SMA > 200 SMA)</div><div class="check-sub">Full bullish stack = confirmed trending up regime</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="ma2" onchange="updateWF()">
+        <div><div class="check-lbl">Target stock MAs stacked in same direction</div><div class="check-sub">Price above 20/50/200 for bullish — below for bearish</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="ma3" onchange="updateWF()">
+        <div><div class="check-lbl">Relative strength vs SPY confirmed</div><div class="check-sub">Holds up on red days — outperforms on green days</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sector -->
+  <div class="sec">
+    <div class="sec-hdr">Step 3 — Sector scan</div>
+    <div class="card">
+      <div class="lbl" style="margin-bottom:4px;">Leading sector today</div>
+      <select id="sector" onchange="updateWF()">
+        <option value="">-- Select leading sector --</option>
+        <option>XLE — Energy</option>
+        <option>XLK — Technology</option>
+        <option>XLI — Industrials</option>
+        <option>XLF — Financials</option>
+        <option>XLV — Healthcare</option>
+        <option>XLP — Consumer staples</option>
+        <option>XLU — Utilities</option>
+      </select>
+      <div class="check-row" style="margin-top:8px;">
+        <input type="checkbox" id="sec1" onchange="updateWF()">
+        <div><div class="check-lbl">Target stock is in the leading sector</div><div class="check-sub">Trade the leaders — money flows to sector first</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Volume -->
+  <div class="sec">
+    <div class="sec-hdr">Step 4 — Volume check</div>
+    <div class="card">
+      <div class="check-row">
+        <input type="checkbox" id="vol1" onchange="updateWF()">
+        <div><div class="check-lbl">Volume above 20-day average</div><div class="check-sub">Price action confirmed by institutional participation</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="vol2" onchange="updateWF()">
+        <div><div class="check-lbl">Scanner options flow confirms direction</div><div class="check-sub">Sweep orders, UOA, vol/OI ratio 3x+ on your ticker</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeframe -->
+  <div class="sec">
+    <div class="sec-hdr">Step 5 — Timeframe alignment</div>
+    <div class="card">
+      <div class="check-row">
+        <input type="checkbox" id="tf1" onchange="updateWF()">
+        <div><div class="check-lbl">Higher TF (daily/weekly) agrees with trade</div><div class="check-sub">If this disagrees — reduce size or skip the trade</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="tf2" onchange="updateWF()">
+        <div><div class="check-lbl">Primary TF (4hr/daily) shows clean structure</div><div class="check-sub">S/R, pattern trigger, and decision live here</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="tf3" onchange="updateWF()">
+        <div><div class="check-lbl">Lower TF entry timed precisely</div><div class="check-sub">Fine-tune only — don't change thesis based on it</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy -->
+  <div class="sec">
+    <div class="sec-hdr">Step 6 — Strategy match</div>
+    <div class="card">
+      <div class="lbl">Regime + setup says:</div>
+      <div class="strat-rec" id="strat-rec">Complete steps 1–5 first</div>
+    </div>
+  </div>
+
+  <!-- Score -->
+  <div class="card">
+    <div class="row" style="margin-bottom:6px;">
+      <div>
+        <div class="lbl">Workflow score</div>
+        <div class="score-row" style="margin-top:4px;">
+          <span class="score-big" id="wf-big">0</span>
+          <span class="score-max">/ 10</span>
+        </div>
+      </div>
+      <span class="badge n" id="wf-badge">Incomplete</span>
+    </div>
+    <div class="sbar-wrap"><div class="sbar-fill" id="wf-bar" style="width:0%;background:var(--red);"></div></div>
+    <div class="verdict fail" id="wf-verdict">Complete all 6 steps before looking at any trade</div>
+  </div>
+
+  <button onclick="resetTab('workflow')" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--mono);margin-top:4px;">↺ Reset workflow</button>
+
+</div>
+
+<!-- ═══ TAB 2: VALIDATE TRADE ═══ -->
+<div class="tab-panel" id="tab-validate">
+
+  <!-- Step 1 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-title">Step 1 — Identify the setup (Q1–Q5)</span>
+      <span class="badge n" id="vb1">0/5</span>
+    </div>
+    <div class="step-body">
+      <div class="check-row"><input type="checkbox" id="v1a" onchange="updateVal()"><div><div class="check-lbl">Q1: Market regime clearly identified</div><div class="check-sub">Trending / choppy / high volatility</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v1b" onchange="updateVal()"><div><div class="check-lbl">Q2: Stock trend and structure confirmed</div><div class="check-sub">Higher highs/lows (bull) or lower highs/lows (bear)</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v1c" onchange="updateVal()"><div><div class="check-lbl">Q3: Momentum confirmed via MA stack</div><div class="check-sub">9/20/50 EMA/SMA stacked in direction of trade</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v1d" onchange="updateVal()"><div><div class="check-lbl">Q4: Clear S/R driving the entry</div><div class="check-sub">Bouncing off support or breaking resistance</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v1e" onchange="updateVal()"><div><div class="check-lbl">Q5: Catalyst identified</div><div class="check-sub">Earnings, upgrade, scanner flow, sector rotation</div></div></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-title">Step 2 — Check the premium</span>
+      <span class="badge n" id="vb2">0/5</span>
+    </div>
+    <div class="step-body">
+      <div class="check-row"><input type="checkbox" id="v2a" onchange="updateVal()"><div><div class="check-lbl">Flow confirms direction (not contradicts)</div><div class="check-sub">Scanner sweep signal matches your chart thesis</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v2b" onchange="updateVal()"><div><div class="check-lbl">IV reasonable for buying premium</div><div class="check-sub">VIX under 25 — not elevated enough to crush your debit</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v2c" onchange="updateVal()"><div><div class="check-lbl">UOA near the money — not far OTM lottery</div><div class="check-sub">Vol/OI 3x+, sweeps, near-ATM strike location</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v2d" onchange="updateVal()"><div><div class="check-lbl">Max gain at least 1.5x the debit paid</div><div class="check-sub">Spread width × 60%+ must exceed your debit cost</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v2e" onchange="updateVal()"><div><div class="check-lbl">Breakeven sits inside your price target</div><div class="check-sub">Strike + debit must be reachable before expiry</div></div></div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-title">Step 3 — Team validation</span>
+      <span class="badge n" id="vb3">0/4</span>
+    </div>
+    <div class="step-body">
+      <div class="check-row"><input type="checkbox" id="v3a" onchange="updateVal()"><div><div class="check-lbl">Bull case articulated out loud</div><div class="check-sub">Why should this trade work?</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v3b" onchange="updateVal()"><div><div class="check-lbl">Bear case considered honestly</div><div class="check-sub">What could go wrong? What am I missing?</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v3c" onchange="updateVal()"><div><div class="check-lbl">Stop level defined before entering</div><div class="check-sub">Price where the trade thesis is invalidated</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v3d" onchange="updateVal()"><div><div class="check-lbl">Realistic profit target set</div><div class="check-sub">Next S/R level or measured move — not wishful thinking</div></div></div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step-card">
+    <div class="step-head">
+      <span class="step-title">Step 4 — Size appropriately</span>
+      <span class="badge n" id="vb4">0/4</span>
+    </div>
+    <div class="step-body">
+      <div class="check-row"><input type="checkbox" id="v4a" onchange="updateVal()"><div><div class="check-lbl">Max dollar loss on this trade calculated</div><div class="check-sub">Debit paid × 100 × contracts = total risk</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v4b" onchange="updateVal()"><div><div class="check-lbl">Risk is within 1–2% of account size</div><div class="check-sub">1–2% rule. Non-negotiable. See Risk Check tab.</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v4c" onchange="updateVal()"><div><div class="check-lbl">Portfolio heat stays under 5–6%</div><div class="check-sub">All open positions combined. If maxed — no new trades.</div></div></div>
+      <div class="check-row"><input type="checkbox" id="v4d" onchange="updateVal()"><div><div class="check-lbl">Not doubling up in same sector / direction</div><div class="check-sub">Correlated positions = hidden risk multiplier</div></div></div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step-card" id="step5-card">
+    <div class="step-head">
+      <span class="step-title">Step 5 — Execute</span>
+      <span class="badge n" id="vb5">Locked</span>
+    </div>
+    <div class="step-body">
+      <div class="check-row">
+        <input type="checkbox" id="v5a" onchange="updateVal()" disabled>
+        <div>
+          <div class="check-lbl" id="v5-lbl" style="color:var(--muted);">Complete steps 1–4 to unlock execution</div>
+          <div class="check-sub">Use limit orders at the midpoint. Never hit the ask on illiquid options.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Score -->
+  <div class="card">
+    <div class="row" style="margin-bottom:6px;">
+      <div>
+        <div class="lbl">Validation score</div>
+        <div class="score-row" style="margin-top:4px;">
+          <span class="score-big" id="val-big">0</span>
+          <span class="score-max">/ 19</span>
+        </div>
+      </div>
+      <span class="badge n" id="val-badge">Not ready</span>
+    </div>
+    <div class="sbar-wrap"><div class="sbar-fill" id="val-bar" style="width:0%;background:var(--red);"></div></div>
+    <div class="verdict fail" id="val-verdict">Complete all 5 steps — no shortcuts. The process is the edge.</div>
+  </div>
+
+  <button onclick="resetTab('validate')" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--mono);margin-top:4px;">↺ Reset for next trade</button>
+
+</div>
+
+<!-- ═══ TAB 3: RISK CHECK ═══ -->
+<div class="tab-panel" id="tab-risk">
+
+  <div class="sec">
+    <div class="sec-hdr">Position sizing calculator</div>
+    <div class="card">
+      <div class="lbl" style="margin-bottom:2px;">Account size ($)</div>
+      <input type="number" id="acct" value="25000" min="1000" oninput="calcRisk()">
+      <div class="lbl" style="margin-top:10px;margin-bottom:2px;">Risk % per trade</div>
+      <select id="rpct" onchange="calcRisk()">
+        <option value="1">1% — Conservative</option>
+        <option value="2" selected>2% — Standard baseline</option>
+        <option value="3">3% — Winning streak only</option>
+      </select>
+      <div class="lbl" style="margin-top:10px;margin-bottom:2px;">Option entry price ($)</div>
+      <input type="number" id="entry" value="3.00" step="0.10" min="0.01" oninput="calcRisk()">
+      <div class="lbl" style="margin-top:10px;margin-bottom:2px;">Stop loss price ($)</div>
+      <input type="number" id="stopv" value="1.50" step="0.10" min="0.01" oninput="calcRisk()">
+      <div class="metric-grid">
+        <div class="metric"><div class="metric-lbl">Max $ risk</div><div class="metric-val gold" id="m-maxrisk">$500</div></div>
+        <div class="metric"><div class="metric-lbl">Risk / contract</div><div class="metric-val" id="m-rpc">$150</div></div>
+        <div class="metric"><div class="metric-lbl">Contracts</div><div class="metric-val g" id="m-contracts">3</div></div>
+        <div class="metric"><div class="metric-lbl">Total cost</div><div class="metric-val" id="m-cost">$900</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hdr">Daily & weekly loss limits</div>
+    <div class="card">
+      <div class="check-row">
+        <input type="checkbox" id="dlimit" onchange="checkLimits()">
+        <div><div class="check-lbl">Daily loss limit reached (3–5%)</div><div class="check-sub" id="daily-sub">$750–$1,250 on a $25k account</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="wlimit" onchange="checkLimits()">
+        <div><div class="check-lbl">Weekly loss limit reached (5–10%)</div><div class="check-sub" id="weekly-sub">$1,250–$2,500 on a $25k account</div></div>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="streak" onchange="checkLimits()">
+        <div><div class="check-lbl">2–3 consecutive losses this week</div><div class="check-sub">Drop to 1–1.5% or stop and review journal</div></div>
+      </div>
+      <div id="limit-msg" style="display:none;" class="verdict fail"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hdr">Adaptive sizing</div>
+    <div class="card">
+      <div class="lbl" style="margin-bottom:4px;">Current performance streak</div>
+      <select id="streak-sel" onchange="updateStreak()">
+        <option value="normal">Normal — baseline 2% risk</option>
+        <option value="win">3+ consecutive wins — size up to 2.5–3%</option>
+        <option value="loss2">2–3 losses — drop to 1–1.5%</option>
+        <option value="loss4">3–5 losses or weekly limit hit — minimum or stop</option>
+      </select>
+      <div class="playbook" id="streak-rec" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ TAB 4: CHEAT SHEET ═══ -->
+<div class="tab-panel" id="tab-cheatsheet">
+
+  <div class="sec">
+    <div class="sec-hdr">The 4 market regimes</div>
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="padding:10px;background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);border-radius:8px;">
+          <div style="font-size:12px;font-weight:500;color:var(--green);margin-bottom:4px;">📈 Trending up</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">9/20/50 stacked bullish. HH/HL.<br><strong style="color:var(--green);">Play: Calls, bull spreads</strong></div>
+        </div>
+        <div style="padding:10px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);border-radius:8px;">
+          <div style="font-size:12px;font-weight:500;color:var(--red);margin-bottom:4px;">📉 Trending down</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">9/20/50 stacked bearish. LH/LL.<br><strong style="color:var(--red);">Play: Puts, bear spreads</strong></div>
+        </div>
+        <div style="padding:10px;background:rgba(243,156,18,0.06);border:1px solid rgba(243,156,18,0.2);border-radius:8px;">
+          <div style="font-size:12px;font-weight:500;color:var(--amber);margin-bottom:4px;">↔ Choppy</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">MAs tangled. Failed breakouts.<br><strong style="color:var(--amber);">Play: Credit spreads or sit out</strong></div>
+        </div>
+        <div style="padding:10px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);border-radius:8px;">
+          <div style="font-size:12px;font-weight:500;color:var(--red);margin-bottom:4px;">⚡ High vol</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">VIX above 25–30. Wide ranges.<br><strong style="color:var(--red);">Play: Sell premium. Size for $0.</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hdr">Greeks quick reference</div>
+    <div class="card">
+      <div class="check-row" style="padding:8px 0;">
+        <div style="width:52px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:500;">Δ Delta</div>
+        <div><div class="check-lbl">Directional exposure per $1 stock move</div><div class="check-sub">0.40–0.60 ATM = balanced risk/reward. 0.10–0.30 OTM = lottery. Also = % chance ITM at expiry.</div></div>
+      </div>
+      <div class="check-row" style="padding:8px 0;">
+        <div style="width:52px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:500;">Θ Theta</div>
+        <div><div class="check-lbl">Daily time decay cost</div><div class="check-sub">Accelerates near expiry. 40–45 DTE is the sweet spot for swing trades.</div></div>
+      </div>
+      <div class="check-row" style="padding:8px 0;">
+        <div style="width:52px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:500;">V Vega</div>
+        <div><div class="check-lbl">Sensitivity to IV changes</div><div class="check-sub">High vega + IV crush after earnings = losses even when stock moves right direction.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hdr">VIX gauge</div>
+    <div class="card">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:80px;padding:10px;background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);border-radius:8px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--green);">Under 15</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">Complacency<br>Options cheap</div>
+        </div>
+        <div style="flex:1;min-width:80px;padding:10px;background:rgba(243,156,18,0.06);border:1px solid rgba(243,156,18,0.2);border-radius:8px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--amber);">15–25</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">Normal<br>Buy spreads OK</div>
+        </div>
+        <div style="flex:1;min-width:80px;padding:10px;background:rgba(231,76,60,0.06);border:1px solid rgba(231,76,60,0.2);border-radius:8px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--red);">Above 25</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">Fear / chop<br>Sell premium</div>
+        </div>
+        <div style="flex:1;min-width:80px;padding:10px;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:8px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--red);">Above 30</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">High fear<br>Size for $0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hdr">Non-negotiable checklist</div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);line-height:2;">
+        <div>☑ Market regime identified</div>
+        <div>☑ Trend alignment confirmed (HH/HL or LH/LL)</div>
+        <div>☑ Risk / reward calculated before entry</div>
+        <div>☑ Position size within 1–2% rule</div>
+        <div>☑ Stop level defined</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;color:var(--muted);">"The most profitable traders aren't the smartest — they're the most disciplined. The process is the edge."</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hdr">Expected move formula</div>
+    <div class="card">
+      <div class="playbook">
+        <strong>Formula:</strong> ATM Call Price + ATM Put Price = Expected Move<br><br>
+        <strong>Example:</strong> Stock at $100. ATM call $4.00 + ATM put $3.50 = $7.50 expected move.<br>Implied range: $92.50 to $107.50<br><br>
+        <strong>Rule:</strong> If your strike is well outside the expected move, you're betting against the market's consensus. Know it before you click buy.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /content -->
+
+<div class="footnote">
+  Built on the 4-week options trading framework.<br>
+  Educational tool only — not financial advice. Always verify on Webull before trading.
+</div>
+
+<script>
+// Clock
+function tick() {
+  const now = new Date();
+  document.getElementById('clk').textContent =
+    now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'America/Chicago'})+' CST';
+}
+setInterval(tick,1000); tick();
+
+// Tabs
+function showTab(id,el){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// Regime
+var regime=null;
+var regimePlays={
+  up:   {label:'Trending up',   cls:'g', play:'<strong>Playbook:</strong> Buy calls / bull call spreads. Ride pullbacks to 20 SMA support. Aggressive long bias.'},
+  down: {label:'Trending down', cls:'r', play:'<strong>Playbook:</strong> Buy puts / bear put spreads. Fade rallies at resistance. Aggressive short bias.'},
+  chop: {label:'Choppy / range',cls:'a', play:'<strong>Playbook:</strong> Sell premium — credit spreads, iron condors. Reduce size. Avoid directional calls or puts.'},
+  hvol: {label:'High vol',      cls:'r', play:'<strong>Playbook:</strong> Defined-risk credit spreads only. Lower size. Size every trade for $0 — assume max loss.'}
+};
+var stratMap={
+  up:'Buy calls or bull call spreads — ride pullbacks to 20 SMA. Stay long bias.',
+  down:'Buy puts or bear put spreads — fade rallies at resistance. Stay short bias.',
+  chop:'Sell premium: credit spreads or iron condors. Avoid directional plays entirely.',
+  hvol:'Defined-risk credit spreads only. Reduce size significantly. No naked buying.'
+};
+function setRegime(r){
+  regime=r;
+  ['up','down','chop','hvol'].forEach(x=>{
+    var el=document.getElementById('ro-'+x);
+    el.className='regime-opt';
+    if(x===r) el.classList.add('sel-'+x);
+  });
+  var d=regimePlays[r];
+  var b=document.getElementById('regime-badge');
+  b.textContent=d.label; b.className='badge '+d.cls;
+  var pb=document.getElementById('playbook');
+  pb.innerHTML=d.play; pb.style.display='';
+  document.getElementById('strat-rec').textContent=stratMap[r]||'Complete steps 1–5 first';
+  updateWF();
+}
+
+// Workflow score
+function updateWF(){
+  var checks=['ma1','ma2','ma3','sec1','vol1','vol2','tf1','tf2','tf3'];
+  var n=checks.filter(id=>document.getElementById(id).checked).length + (regime?1:0);
+  var pct=Math.round(n/10*100);
+  document.getElementById('wf-big').textContent=n;
+  var bar=document.getElementById('wf-bar');
+  bar.style.width=pct+'%';
+  bar.style.background=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+  var badge=document.getElementById('wf-badge');
+  var verdict=document.getElementById('wf-verdict');
+  if(pct>=80){
+    badge.textContent='Ready'; badge.className='badge g';
+    verdict.className='verdict pass'; verdict.textContent='Strong setup — proceed to Validate Trade tab';
+  } else if(pct>=50){
+    badge.textContent='Partial'; badge.className='badge a';
+    verdict.className='verdict partial'; verdict.textContent='Partial alignment — reduce size or wait for more confirmation';
+  } else {
+    badge.textContent='Incomplete'; badge.className='badge n';
+    verdict.className='verdict fail'; verdict.textContent='Too many gaps — no trade today';
+  }
+}
+
+// Validation score
+function updateVal(){
+  var s1=['v1a','v1b','v1c','v1d','v1e'];
+  var s2=['v2a','v2b','v2c','v2d','v2e'];
+  var s3=['v3a','v3b','v3c','v3d'];
+  var s4=['v4a','v4b','v4c','v4d'];
+  function cnt(ids){return ids.filter(id=>document.getElementById(id).checked).length;}
+  var n1=cnt(s1),n2=cnt(s2),n3=cnt(s3),n4=cnt(s4);
+  var allDone=n1===5&&n2===5&&n3===4&&n4===4;
+  var v5=document.getElementById('v5a');
+  var v5lbl=document.getElementById('v5-lbl');
+  var vb5=document.getElementById('vb5');
+  v5.disabled=!allDone;
+  if(allDone){
+    v5lbl.style.color=''; v5lbl.textContent='All steps clear — execute with discipline. Limit orders at midpoint only.';
+    vb5.textContent='Unlocked'; vb5.className='badge g';
+  } else {
+    v5lbl.style.color='var(--muted)'; v5lbl.textContent='Complete steps 1–4 to unlock execution';
+    vb5.textContent='Locked'; vb5.className='badge n';
+  }
+  function setBadge(id,n,max){
+    var el=document.getElementById(id);
+    el.textContent=n+'/'+max;
+    el.className='badge '+(n===max?'g':n>0?'a':'n');
+  }
+  setBadge('vb1',n1,5); setBadge('vb2',n2,5); setBadge('vb3',n3,4); setBadge('vb4',n4,4);
+  var n5=v5.checked?1:0;
+  var total=n1+n2+n3+n4+n5;
+  var pct=Math.round(total/19*100);
+  document.getElementById('val-big').textContent=total;
+  var bar=document.getElementById('val-bar');
+  bar.style.width=pct+'%';
+  bar.style.background=pct===100?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
+  var badge=document.getElementById('val-badge');
+  var verdict=document.getElementById('val-verdict');
+  if(pct===100){
+    badge.textContent='Execute'; badge.className='badge g';
+    verdict.className='verdict pass'; verdict.textContent='All 5 steps clear — execute with discipline';
+  } else if(pct>=70){
+    badge.textContent='Almost'; badge.className='badge a';
+    verdict.className='verdict partial'; verdict.textContent='Fill remaining gaps — no shortcuts on the process';
+  } else {
+    badge.textContent='Not ready'; badge.className='badge n';
+    verdict.className='verdict fail'; verdict.textContent='Not ready — complete all steps. The process is the edge.';
+  }
+}
+
+// Risk calc
+function calcRisk(){
+  var acct=parseFloat(document.getElementById('acct').value)||0;
+  var pct=parseFloat(document.getElementById('rpct').value)||2;
+  var entry=parseFloat(document.getElementById('entry').value)||0;
+  var stop=parseFloat(document.getElementById('stopv').value)||0;
+  var maxR=acct*(pct/100);
+  var rpc=Math.max((entry-stop)*100,0);
+  var contracts=rpc>0?Math.floor(maxR/rpc):0;
+  var cost=contracts*entry*100;
+  document.getElementById('m-maxrisk').textContent='$'+Math.round(maxR).toLocaleString();
+  document.getElementById('m-rpc').textContent='$'+Math.round(rpc).toLocaleString();
+  document.getElementById('m-contracts').textContent=contracts;
+  document.getElementById('m-contracts').className='metric-val '+(contracts>0?'g':'r');
+  document.getElementById('m-cost').textContent='$'+Math.round(cost).toLocaleString();
+  var a=acct||25000;
+  document.getElementById('daily-sub').textContent='$'+Math.round(a*.03).toLocaleString()+'–$'+Math.round(a*.05).toLocaleString()+' on this account';
+  document.getElementById('weekly-sub').textContent='$'+Math.round(a*.05).toLocaleString()+'–$'+Math.round(a*.10).toLocaleString()+' on this account';
+}
+
+function checkLimits(){
+  var d=document.getElementById('dlimit').checked;
+  var w=document.getElementById('wlimit').checked;
+  var s=document.getElementById('streak').checked;
+  var el=document.getElementById('limit-msg');
+  if(d||w||s){
+    el.style.display='';
+    if(w){el.className='verdict fail';el.textContent='Weekly limit hit — stop trading. Review your journal. Figure out what happened.';}
+    else if(d){el.className='verdict fail';el.textContent='Daily limit hit — walk away. The market will be there tomorrow.';}
+    else{el.className='verdict partial';el.textContent='Losing streak — reduce position size by 25–50% immediately.';}
+  } else { el.style.display='none'; }
+}
+
+function updateStreak(){
+  var v=document.getElementById('streak-sel').value;
+  var m={
+    normal:'Use your standard 2% risk baseline. Trade normally.',
+    win:'<strong>Winning streak:</strong> Size up to 2.5–3%. You\'re in sync — capitalize. Drop back immediately on the first loss.',
+    loss2:'<strong>2–3 losses:</strong> Drop to 1–1.5% risk. Slow down. Review what\'s not working.',
+    loss4:'<strong>3–5 losses / weekly limit:</strong> Stop trading or minimum size only. Review journal before next trade.'
+  };
+  document.getElementById('streak-rec').innerHTML=m[v]||'';
+}
+
+function resetTab(t){
+  if(t==='workflow'){
+    ['ma1','ma2','ma3','sec1','vol1','vol2','tf1','tf2','tf3'].forEach(id=>{document.getElementById(id).checked=false;});
+    document.getElementById('sector').value='';
+    regime=null;
+    ['up','down','chop','hvol'].forEach(x=>document.getElementById('ro-'+x).className='regime-opt');
+    document.getElementById('regime-badge').textContent='Not set'; document.getElementById('regime-badge').className='badge n';
+    document.getElementById('playbook').style.display='none';
+    document.getElementById('strat-rec').textContent='Complete steps 1–5 first';
+    updateWF();
+  } else if(t==='validate'){
+    ['v1a','v1b','v1c','v1d','v1e','v2a','v2b','v2c','v2d','v2e','v3a','v3b','v3c','v3d','v4a','v4b','v4c','v4d','v5a'].forEach(id=>{
+      var el=document.getElementById(id);
+      el.checked=false;
+    });
+    updateVal();
+  }
+}
+
+calcRisk(); updateStreak(); updateWF();
+</script>
+</body>
+</html>
